@@ -27,7 +27,7 @@ def main_wrapped(screen, db, zgram_queue):
     window_stack = [status_bar, main_window]
 
     while True:
-        key = screen.get_wch() # blocks for 50 usecs
+        key = screen.get_wch() # blocks indefinitely
 
         if key == curses.KEY_RESIZE:
             # this could be either a legitimate SIGWINCH, notifying us that
