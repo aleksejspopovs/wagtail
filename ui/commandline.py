@@ -124,6 +124,8 @@ class CommandLine:
         elif key == '\n':
             result.append(('cmdline_close', ))
             result.extend(parse_cmdline_into_events(''.join(self.input)))
+        elif key == '\x03': # Ctrl+C
+            result.append(('cmdline_close', ))
 
         self.redraw()
 

@@ -3,6 +3,8 @@ import curses
 import os
 import os.path
 import queue
+import sys
+import termios
 
 from zpipe.python import zpipe
 
@@ -76,10 +78,11 @@ class Wagtail:
         else:
             self.window_stack.append(ZephyrgramComposer(self.screen, opts))
 
-    def event_send_zephyrgrams(self, zgrams):
+    def event_composer_close(self):
         assert(isinstance(self.window_stack[-1], ZephyrgramComposer))
         self.window_stack.pop().close()
 
+    def event_send_zephyrgrams(self, zgrams):
         for zgram in zgrams:
             self.zpipe.zwrite(zgram)
 
@@ -138,6 +141,11 @@ class Wagtail:
             getattr(self, 'event_{}'.format(event))(*event_args)
 
     def main_curses(self, screen):
+        # tell the terminal to not send us SIGINTs when Ctrl+C is pressed
+        tty_attributes = termios.tcgetattr(sys.stdin)
+        tty_attributes[3] &= ~termios.ISIG
+        termios.tcsetattr(sys.stdin, termios.TCSANOW, tty_attributes)
+
         self.screen = screen
 
         curses.use_default_colors()

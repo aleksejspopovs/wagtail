@@ -135,6 +135,7 @@ class ZephyrgramComposer:
                 if len(self.zwrite_opts.recipients) == 0:
                     self.zwrite_opts.recipients.append(None)
 
+                result.append(('composer_close', ))
                 result.append(('send_zephyrgrams',
                     [Zephyrgram(None,
                         self.zwrite_opts.class_,
@@ -182,6 +183,8 @@ class ZephyrgramComposer:
                 self.buffer.insert(self.cursor_y + 1, new_line)
                 self.cursor_y += 1
                 self.cursor_x = len(new_line)
+        elif key == '\x03': # Ctrl+C
+            result.append(('composer_close', ))
 
         self.redraw()
 
