@@ -141,8 +141,8 @@ class ZephyrgramComposer:
             if ((self.cursor_y == len(self.buffer) - 1) and
                 (self.cursor_x == 1) and
                 (self.buffer[self.cursor_y] == ['.'])):
-                if len(self.zwrite_opts.recipients) == 0:
-                    self.zwrite_opts.recipients.append(None)
+
+                recipients = self.zwrite_opts.recipients or [None]
 
                 result.append(('composer_close', ))
                 result.append(('send_zephyrgrams',
@@ -156,7 +156,7 @@ class ZephyrgramComposer:
                          # skip last line
                          '\n'.join(''.join(x) for x in self.buffer[:-1])],
                         None)
-                     for recipient in self.zwrite_opts.recipients]))
+                     for recipient in recipients]))
 
             self.buffer[self.cursor_y], new_line = \
                 (self.buffer[self.cursor_y][:self.cursor_x:],
