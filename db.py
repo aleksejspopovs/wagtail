@@ -2,6 +2,8 @@ import sqlite3
 
 from zpipe.python.zpipe import Zephyrgram
 
+from util import take_unprefix
+
 class Database:
     def __init__(self):
         self.db = sqlite3.connect('/tmp/messages.sqlite3')
@@ -13,6 +15,9 @@ class Database:
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
+
+    def close(self):
         with self.db:
             self.db.execute('PRAGMA optimize')
         self.db.close()
@@ -44,6 +49,13 @@ class Database:
                      auth INTEGER,
                      fields BLOB,
                      time INT)''')
+                self.db.execute('''
+                    CREATE TABLE subscriptions
+                    (class TEXT NOT NULL,
+                     instance TEXT NOT NULL,
+                     recipient TEXT NOT NULL,
+                     undepth INTEGER NOT NULL,
+                     PRIMARY KEY (class, instance, recipient))''')
         else:
             # database exists, must check version and migrate if necessary
             version = self.db.execute('SELECT version FROM version').fetchone()
@@ -121,14 +133,108 @@ class Database:
                 return self.last_index()
             return result[0]
 
-    def get_messages_starting_with(self, index, count):
+    def get_messages_starting_with(self, index):
         cursor = self.db.execute('''
             SELECT * FROM messages
             WHERE id >= ?
-            ORDER BY id ASC
-            LIMIT ?''', (index, count))
+            ORDER BY id ASC''', (index, ))
 
         row = cursor.fetchone()
         while row is not None:
             yield (row[0], self._tuple_to_zephyrgram(row))
             row = cursor.fetchone()
+
+    def get_subscriptions(self, expand_un=True):
+        cursor = self.db.execute('SELECT * FROM subscriptions')
+
+        row = cursor.fetchone()
+        while row is not None:
+            class_, instance, recipient, undepth = row
+            yield row
+            if expand_un:
+                for i in range(1, undepth + 1):
+                    yield (('un'*i) + class_, instance, recipient, 0)
+
+            row = cursor.fetchone()
+
+    def subscribe(self, class_, instance, recipient):
+        undepth, class_stripped = take_unprefix(class_)
+
+        result = self.db.execute('''
+            SELECT undepth, rowid
+            FROM subscriptions
+            WHERE (class = ?)
+            AND (instance = ?)
+            AND (recipient = ?)''',
+            (class_stripped, instance, recipient)).fetchone()
+
+        if result is None:
+            with self.db:
+                self.db.execute('''
+                    INSERT INTO subscriptions
+                    VALUES (?, ?, ?, ?)''',
+                    (class_stripped, instance, recipient, undepth))
+            return [('un'*i + class_stripped, instance, recipient)
+                    for i in range(undepth + 1)]
+        else:
+            existing_undepth, rowid = result
+            if existing_undepth < undepth:
+                with self.db:
+                    self.db.execute('''
+                        UPDATE subscriptions
+                        SET undepth = ?
+                        WHERE rowid = ?''', (undepth, rowid))
+                return [('un'*i + class_stripped, instance, recipient)
+                        for i in range(existing_undepth + 1, undepth + 1)]
+            else:
+                return []
+
+    def unsubscribe(self, class_, instance, recipient):
+        undepth, _ = take_unprefix(class_)
+        if undepth != 0:
+            # cannot unsubscribe from an unclass directly
+            # TODO: clear error message
+            return []
+
+        result = self.db.execute('''
+            SELECT undepth, rowid
+            FROM subscriptions
+            WHERE (class = ?)
+            AND (instance = ?)
+            AND (recipient = ?)''',
+            (class_, instance, recipient)).fetchone()
+
+        if result is None:
+            return []
+
+        existing_undepth, rowid = result
+
+        with self.db:
+            self.db.execute('''
+                DELETE FROM subscriptions
+                WHERE rowid = ?''', (rowid, ))
+
+        return [('un'*i + class_, instance, recipient)
+                for i in range(existing_undepth + 1)]
+
+    def update_undepth(self, class_, candidate_undepth):
+        # no need to run SQL queries if it's obvious nothing will change
+        if candidate_undepth == 0:
+            return []
+
+        affected = self.db.execute('''
+            SELECT instance, recipient
+            FROM subscriptions
+            WHERE (class = ?)
+            AND (undepth < ?)''', (class_, candidate_undepth)).fetchall()
+
+        if len(affected) == 0:
+            return []
+
+        with self.db:
+            self.db.execute('''
+                UPDATE subscriptions
+                SET undepth = max(undepth, ?)
+                WHERE class = ?''', (candidate_undepth, class_))
+
+        return affected

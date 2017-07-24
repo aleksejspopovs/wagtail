@@ -1,10 +1,64 @@
+import shlex
+
 import curses
 import curses.panel
 
+from args import StandaloneArgParser, ArgParserException
 from ui.utils import curse_string
 
+def parse_cmdline_into_events(cmdline):
+    result = []
+    command, *args = shlex.split(cmdline) or ['']
+
+    if command == '':
+        pass
+    elif command == 'zwrite':
+        parser = StandaloneArgParser()
+        # TODO: add -C, -a/-d, -S, -s
+        parser.add_argument('-c', '--class', default='MESSAGE',
+            dest='class_')
+        parser.add_argument('-i', '--instance', default='PERSONAL')
+        parser.add_argument('-O', '--opcode', default='')
+        parser.add_argument('recipients', nargs='*')
+
+        try:
+            opts = parser.parse_args(args)
+        except ArgParserException as error:
+            result.append(('status', error.args[0]))
+        else:
+            result.append(('zwrite', opts))
+    elif (command == 'sub') or (command == 'unsub'):
+        if len(args) == 0:
+            result.append(('status',
+                '[un]sub needs 1-3 args: class [instance [recipient]]'))
+        else:
+            class_ = args[0]
+            instance = args[1] if len(args) >= 2 else '*'
+            recipient = args[2] if len(args) == 3 else '*'
+
+            if command == 'sub':
+                result.append(('subscribe', class_, instance, recipient))
+            else:
+                result.append(('unsubscribe', class_, instance, recipient))
+    elif command == 'import_zsubs':
+        if len(args) > 1:
+            result.append('status',
+                'import_zsubs takes just one optional argument, a path.')
+        else:
+            result.append(('import_zsubs', args[0] if len(args) > 0 else None))
+    elif command == 'quit':
+        if len(args) == 0:
+            result.append(('quit', ))
+        else:
+            result.append(('status', 'quit doesn\'t take arguments.'))
+    else:
+        result.append(('status', 'Unknown command {}'.format(command)))
+
+    return result
+
+
 class CommandLine:
-    def __init__(self, screen):
+    def __init__(self, screen, initial_input=''):
         self.screen = screen
         # the position & size really doesn't matter
         # because of the call to update_size() below
@@ -12,8 +66,9 @@ class CommandLine:
         self.cols = 1
         self.panel = curses.panel.new_panel(self.window)
 
-        self.input = []
-        self.cursor = 0
+        self.input = list(initial_input)
+        self.cursor = len(self.input)
+        self.first_displayed_character = 0
 
         self.update_size()
 
@@ -22,9 +77,20 @@ class CommandLine:
 
         self.window.addstr(0, 0, curse_string('> '))
 
-        # TODO: handle commands that don't fit on the screen
-        self.window.addstr(0, 2, curse_string(''.join(self.input)))
-        self.window.chgat(0, 2 + self.cursor, 1, curses.A_REVERSE)
+        available_cols = self.cols - 2 - 1
+        if self.first_displayed_character + available_cols <= self.cursor:
+            self.first_displayed_character = self.cursor - available_cols + 1
+
+        if self.cursor < self.first_displayed_character:
+            self.first_displayed_character = self.cursor
+
+        self.window.addstr(0, 2,
+            curse_string(''.join(
+                self.input[self.first_displayed_character:]))[:available_cols])
+        self.window.chgat(0,
+            2 + self.cursor - self.first_displayed_character,
+            1,
+            curses.A_REVERSE)
 
         self.window.noutrefresh()
 
@@ -37,11 +103,9 @@ class CommandLine:
         self.redraw()
 
     def handle_keypress(self, key):
-        result = (None, )
+        result = []
 
-        if key == '\n':
-            result = ('cmdline_close', ''.join(self.input))
-        elif key == curses.KEY_BACKSPACE:
+        if key == curses.KEY_BACKSPACE:
             if self.cursor != 0:
                 del self.input[self.cursor - 1]
                 self.cursor -= 1
@@ -57,6 +121,9 @@ class CommandLine:
         elif isinstance(key, str) and key.isprintable():
             self.input.insert(self.cursor, key)
             self.cursor += 1
+        elif key == '\n':
+            result.append(('cmdline_close', ))
+            result.extend(parse_cmdline_into_events(''.join(self.input)))
 
         self.redraw()
 

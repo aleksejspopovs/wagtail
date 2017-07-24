@@ -3,6 +3,18 @@ import curses.panel
 
 from ui.utils import curse_string
 
+def take_up_to(it, n):
+    res = []
+    for i in range(n):
+        try:
+            element = next(it)
+        except StopIteration:
+            break
+        else:
+            res.append(element)
+    return res
+
+
 class MainWindow:
     def __init__(self, screen, db):
         self.db = db
@@ -54,8 +66,8 @@ class MainWindow:
 
         # every message takes at least 1 line, so we take $2 * self.lines$
         # messages, which is at least two screens worth of messages
-        messages = list(self.db.get_messages_starting_with(
-            self.top_index, self.lines))
+        messages = take_up_to(self.db.get_messages_starting_with(
+            self.top_index), 2 * self.lines)
 
         # we don't want the current message to ever start below the lower half
         # of the screen
@@ -107,33 +119,36 @@ class MainWindow:
         self.lines -= 1 # for status bar
 
         self.window.resize(self.lines, self.cols)
+
         curses.panel.update_panels()
 
         self.redraw()
 
     def handle_keypress(self, key):
-        result = (None, )
+        result = []
 
-        if key == curses.KEY_DOWN:
+        if (key == curses.KEY_DOWN) or (key == 'j'):
             self.advance(+1)
-        elif key == curses.KEY_UP:
+        elif (key == curses.KEY_UP) or (key == 'k'):
             self.advance(-1)
-        elif key == '<':
+        elif (key == '<') or (key == 'g'):
             self.move_to(self.db.first_index())
-        elif key == '>':
+        elif (key == '>') or (key == 'G'):
             self.move_to(self.db.last_index())
         elif key == curses.KEY_PPAGE: # Previous Page
             # TODO: this does not actually work well, it just
-            # scroll up by one pretty much all the time
+            # scrolls up by one pretty much all the time
             if self.top_index is not None:
                 self.move_to(self.db.advance(self.top_index, -1))
         elif key == curses.KEY_NPAGE: # Next Page
             if self.last_visible_message is not None:
                 self.move_to(self.db.advance(self.last_visible_message, +1))
         elif key == ':':
-            result = ('cmdline_open', )
+            result.append(('cmdline_open', ))
+        elif key == 'z':
+            result.append(('cmdline_open', 'zwrite '))
         elif key == 'q':
-            result = ('quit', )
+            result.append(('quit', ))
         else:
             if isinstance(key, str):
                 raise Exception(key, [ord(x) for x in key])
