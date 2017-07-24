@@ -36,10 +36,19 @@ class ZephyrgramComposer:
 
     def redraw(self):
         self.window.erase()
+
+        # print title
+        title = '{}/{}/{}'.format(self.zwrite_opts.class_,
+            self.zwrite_opts.instance, ','.join(self.zwrite_opts.recipients))
+        if len(title) > self.editor_cols:
+            title = title[:self.editor_cols - 3] + '...'
+        self.window.addstr(0, 1, curse_string(title))
+
         # curses.textpad.rectangle is broken for rectangles touching the lower
         # right corner
         self.window.vline(1, 0, curses.ACS_VLINE, self.editor_lines)
-        self.window.hline(0, 1, curses.ACS_HLINE, self.editor_cols)
+        self.window.hline(0, 1 + len(title), curses.ACS_HLINE,
+            self.editor_cols - len(title))
         self.window.hline(self.editor_lines + 1, 1,
             curses.ACS_HLINE, self.editor_cols)
         self.window.vline(1, self.editor_cols + 1,
