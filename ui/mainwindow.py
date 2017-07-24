@@ -147,6 +147,19 @@ class MainWindow:
             result.append(('cmdline_open', ))
         elif key == 'z':
             result.append(('cmdline_open', 'zwrite '))
+        elif (key == 'r') or (key == 'R'):
+            message = self.db.get_message(self.current_index)
+            if message is not None:
+                event = 'cmdline_exec' if key == 'r' else 'cmdline_open'
+                if (message.cls.lower() == 'message'):
+                    # it's a personal
+                    # TODO: handle CCs
+                    result.append((event,
+                        'zwrite {}'.format(message.sender)))
+                else:
+                    result.append((event,
+                        'zwrite -c {} -i {} {}'.format(message.cls,
+                            message.instance, message.recipient)))
         elif key == 'q':
             result.append(('quit', ))
         else:

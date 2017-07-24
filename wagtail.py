@@ -7,7 +7,7 @@ import queue
 from zpipe.python import zpipe
 
 from db import Database
-from ui.commandline import CommandLine
+from ui.commandline import CommandLine, parse_cmdline_into_events
 from ui.composer import ZephyrgramComposer
 from ui.mainwindow import MainWindow
 from ui.statusbar import StatusBar
@@ -58,6 +58,10 @@ class Wagtail:
     def event_cmdline_close(self):
         assert isinstance(self.window_stack[-1], CommandLine)
         self.window_stack.pop().close()
+
+    def event_cmdline_exec(self, cmdline):
+        events = parse_cmdline_into_events(cmdline)
+        self.handle_events(events)
 
     def event_status(self, text):
         self.status_bar.set_status(text)
@@ -128,6 +132,11 @@ class Wagtail:
             self.status_bar.set_status(
                 'Error: file {} not found.'.format(path))
 
+    def handle_events(self, events):
+        for event, *event_args in events:
+            # call self.event_{eventname}(*event_args)
+            getattr(self, 'event_{}'.format(event))(*event_args)
+
     def main_curses(self, screen):
         self.screen = screen
 
@@ -170,13 +179,10 @@ class Wagtail:
             else:
                 self.status_bar.clear_status()
 
-                events = self.window_stack[-1].handle_keypress(key)
-
                 self.should_quit = False
 
-                for event, *event_args in events:
-                    # call self.event_{eventname}(*event_args)
-                    getattr(self, 'event_{}'.format(event))(*event_args)
+                events = self.window_stack[-1].handle_keypress(key)
+                self.handle_events(events)
 
                 if self.should_quit:
                     break
