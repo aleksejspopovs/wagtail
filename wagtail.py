@@ -86,6 +86,17 @@ class Wagtail:
         for zgram in zgrams:
             self.zpipe.zwrite(zgram)
 
+            if zgram.cls.lower() == 'message':
+                # this is a personal message. we won't get it back, so
+                # we should save a copy.
+                # TODO: is it okay that sender is set to None?
+                #       what if the zgram actually fails to send?
+                zgram.time = zgram.time or time.time()
+                zgram.sender = zgram.sender or get_principal()
+                self.db.append_message(zgram)
+
+        self.main_window.redraw() # to display the personals
+
     def event_subscribe(self, class_, instance, recipient):
         new_subs = self.db.subscribe(class_, instance, recipient)
 
