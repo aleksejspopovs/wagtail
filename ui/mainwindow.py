@@ -32,16 +32,16 @@ class MainWindow:
         return 2 + message.fields[1].rstrip().count('\n')
 
     def draw_message(self, row, message):
-        self.window.addstr(row, 2,
-            curse_string(self.config.format_zgram_header(message)))
+        self.window.addnstr(row, 2,
+            curse_string(self.config.format_zgram_header(message)),
+            self.cols - 2)
 
-        # TODO: deal with lines that are too long
         empty_row = row + 1
         for i, line in enumerate(message.fields[1].rstrip().split('\n'), 1):
             if row + i == self.lines:
                 break
 
-            self.window.addstr(row + i, 4, curse_string(line))
+            self.window.addnstr(row + i, 4, curse_string(line), self.cols - 4)
             empty_row = row + i + 1
 
         return empty_row
