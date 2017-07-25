@@ -16,8 +16,9 @@ def take_up_to(it, n):
 
 
 class MainWindow:
-    def __init__(self, screen, db):
+    def __init__(self, screen, db, config):
         self.db = db
+        self.config = config
         self.screen = screen
         # the size doesn't matter because of the call to update_size() below
         self.window = curses.newwin(1, 1, 0, 0)
@@ -31,10 +32,8 @@ class MainWindow:
         return 2 + message.fields[1].rstrip().count('\n')
 
     def draw_message(self, row, message):
-        self.window.addstr(row, 2, curse_string('{}/{} {}'.format(
-            message.cls,
-            message.instance,
-            message.sender)))
+        self.window.addstr(row, 2,
+            curse_string(self.config.format_zgram_header(message)))
 
         # TODO: deal with lines that are too long
         empty_row = row + 1

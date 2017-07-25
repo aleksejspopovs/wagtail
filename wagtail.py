@@ -5,9 +5,11 @@ import os.path
 import queue
 import sys
 import termios
+import time
 
 from zpipe.python import zpipe
 
+from configmanager import ConfigManager
 from db import Database
 from ui.commandline import CommandLine, parse_cmdline_into_events
 from ui.composer import ZephyrgramComposer
@@ -21,6 +23,7 @@ SIGWINCH = 28
 
 class Wagtail:
     def __init__(self):
+        self.config = ConfigManager()
         self.db = Database()
 
         self.zgram_queue = queue.Queue()
@@ -163,7 +166,7 @@ class Wagtail:
         curses.curs_set(0)
 
         self.status_bar = StatusBar(screen)
-        self.main_window = MainWindow(screen, self.db)
+        self.main_window = MainWindow(screen, self.db, self.config)
         curses.doupdate()
 
         # this window stack kind of duplicates the one kept by
