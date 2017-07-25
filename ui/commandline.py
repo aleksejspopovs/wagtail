@@ -46,6 +46,11 @@ def parse_cmdline_into_events(cmdline):
                 'import_zsubs takes just one optional argument, a path.')
         else:
             result.append(('import_zsubs', args[0] if len(args) > 0 else None))
+    elif command == 'reload_config':
+        if len(args) == 0:
+            result.append(('reload_config', ))
+        else:
+            result.append(('status', 'reload_config doesn\'t take arguments.'))
     elif command == 'quit':
         if len(args) == 0:
             result.append(('quit', ))

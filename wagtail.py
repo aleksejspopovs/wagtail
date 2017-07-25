@@ -149,6 +149,10 @@ class Wagtail:
             self.status_bar.set_status(
                 'Error: file {} not found.'.format(path))
 
+    def event_reload_config(self):
+        self.config.reload()
+        self.main_window.redraw() # styling rules might've changed
+
     def handle_events(self, events):
         for event, *event_args in events:
             # call self.event_{eventname}(*event_args)

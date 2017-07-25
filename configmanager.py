@@ -3,6 +3,7 @@ import importlib.util
 import os
 import os.path
 import shutil
+import sys
 
 EXPECTED_CONFIG_VERSION = 1
 
@@ -22,14 +23,15 @@ class ConfigManager:
                     'example_config.py'),
                 self.path)
 
-        self.spec = importlib.util.spec_from_file_location('config', self.path)
+        self.module_name = 'wagtail_user_config'
+        self.spec = importlib.util.spec_from_file_location(self.module_name,
+            self.path)
+        self.reload()
+
+    def reload(self):
         self.module = importlib.util.module_from_spec(self.spec)
         self.spec.loader.exec_module(self.module)
 
-        self.check_version()
-
-    def reload(self):
-        self.module = importlib.reload(self.module)
         self.check_version()
 
     def check_version(self):
