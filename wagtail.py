@@ -36,7 +36,7 @@ class Wagtail:
             # this is the best way I know of to interrupt ncurses
             # in blocking mode.
             os.kill(os.getpid(), SIGWINCH)
-        def error_handler(zp, zgram):
+        def error_handler(error):
             self.error_queue.put(error)
             os.kill(os.getpid(), SIGWINCH)
 
