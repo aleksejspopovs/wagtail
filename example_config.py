@@ -32,3 +32,6 @@ def format_zgram_header(zgram):
             sender=sender,
             date=date,
             zsig=zsig)
+
+def compute_zsig(class_, instance, recipients, opcode, auth, body):
+    return 'sent from wagtail'

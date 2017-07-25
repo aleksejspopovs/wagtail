@@ -79,7 +79,8 @@ class Wagtail:
             self.status_bar.set_status(
                 'Cannot send personal message with no recipient.')
         else:
-            self.window_stack.append(ZephyrgramComposer(self.screen, opts))
+            self.window_stack.append(ZephyrgramComposer(self.screen,
+                self.config, opts))
 
     def event_composer_close(self):
         assert(isinstance(self.window_stack[-1], ZephyrgramComposer))

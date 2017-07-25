@@ -15,8 +15,9 @@ def count_while(f, lst):
     return res
 
 class ZephyrgramComposer:
-    def __init__(self, screen, zwrite_opts):
+    def __init__(self, screen, config, zwrite_opts):
         self.screen = screen
+        self.config = config
         # the position & size really doesn't matter
         # because of the call to update_size() below
         self.window = curses.newwin(1, 1, 0, 0)
@@ -143,6 +144,11 @@ class ZephyrgramComposer:
                 (self.buffer[self.cursor_y] == ['.'])):
 
                 recipients = self.zwrite_opts.recipients or [None]
+                body = '\n'.join(''.join(x) for x in self.buffer[:-1])
+                auth = True
+                zsig = self.config.compute_zsig(self.zwrite_opts.class_,
+                    self.zwrite_opts.instance, recipients,
+                    self.zwrite_opts.opcode, auth, body)
 
                 result.append(('composer_close', ))
                 result.append(('send_zephyrgrams',
@@ -151,10 +157,8 @@ class ZephyrgramComposer:
                         self.zwrite_opts.instance,
                         recipient,
                         self.zwrite_opts.opcode,
-                        True,
-                        ['sent from wagtail',
-                         # skip last line
-                         '\n'.join(''.join(x) for x in self.buffer[:-1])],
+                        auth,
+                        [zsig, body],
                         None)
                      for recipient in recipients]))
 
