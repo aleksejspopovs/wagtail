@@ -19,6 +19,9 @@ def parse_cmdline_into_events(cmdline):
             dest='class_')
         parser.add_argument('-i', '--instance', default='PERSONAL')
         parser.add_argument('-O', '--opcode', default='')
+        parser.add_argument('-d', '--deauth', action='store_true')
+        parser.add_argument('-S', '--sender', default=None)
+        parser.add_argument('-s', '--signature', default=None)
         parser.add_argument('recipients', nargs='*')
 
         try:

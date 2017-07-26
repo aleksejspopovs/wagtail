@@ -145,19 +145,25 @@ class ZephyrgramComposer:
 
                 recipients = self.zwrite_opts.recipients or [None]
                 body = '\n'.join(''.join(x) for x in self.buffer[:-1])
-                auth = True
-                zsig = self.config.compute_zsig(self.zwrite_opts.class_,
-                    self.zwrite_opts.instance, recipients,
-                    self.zwrite_opts.opcode, auth, body)
+
+                zsig = self.zwrite_opts.signature
+                if zsig is None:
+                    zsig = self.config.compute_zsig(self.zwrite_opts.sender,
+                        self.zwrite_opts.class_,
+                        self.zwrite_opts.instance,
+                        recipients,
+                        self.zwrite_opts.opcode,
+                        not self.zwrite_opts.deauth,
+                        body)
 
                 result.append(('composer_close', ))
                 result.append(('send_zephyrgrams',
-                    [Zephyrgram(None,
+                    [Zephyrgram(self.zwrite_opts.sender,
                         self.zwrite_opts.class_,
                         self.zwrite_opts.instance,
                         recipient,
                         self.zwrite_opts.opcode,
-                        auth,
+                        not self.zwrite_opts.deauth,
                         [zsig, body],
                         None)
                      for recipient in recipients]))
