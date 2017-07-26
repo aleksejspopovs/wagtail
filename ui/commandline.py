@@ -77,6 +77,9 @@ class CommandLine:
         self.cursor = len(self.input)
         self.first_displayed_character = 0
 
+        # turn the cursor on
+        curses.curs_set(1)
+
         self.update_size()
 
     def redraw(self):
@@ -91,13 +94,11 @@ class CommandLine:
         if self.cursor < self.first_displayed_character:
             self.first_displayed_character = self.cursor
 
-        self.window.addstr(0, 2,
-            curse_string(''.join(
-                self.input[self.first_displayed_character:]))[:available_cols])
-        self.window.chgat(0,
-            2 + self.cursor - self.first_displayed_character,
-            1,
-            curses.A_REVERSE)
+        self.window.addnstr(0, 2,
+            curse_string(''.join(self.input[self.first_displayed_character:])),
+            available_cols)
+
+        self.window.move(0, 2 + self.cursor - self.first_displayed_character)
 
         self.window.noutrefresh()
 
@@ -142,3 +143,5 @@ class CommandLine:
         self.panel.hide()
         curses.panel.update_panels()
         del self.panel
+
+        curses.curs_set(0)

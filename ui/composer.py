@@ -33,6 +33,9 @@ class ZephyrgramComposer:
 
         self.zwrite_opts = zwrite_opts
 
+        # turn the cursor on
+        curses.curs_set(1)
+
         self.update_size()
 
     def redraw(self):
@@ -84,11 +87,9 @@ class ZephyrgramComposer:
                 ''.join(self.buffer[self.top + y]))[self.left:],
                 self.editor_cols)
 
-        self.window.chgat(
+        self.window.move(
             1 + self.cursor_y - self.top,
-            1 + self.cursor_x - self.left,
-            1,
-            curses.A_REVERSE)
+            1 + self.cursor_x - self.left)
 
         self.window.noutrefresh()
 
@@ -216,3 +217,5 @@ class ZephyrgramComposer:
         self.panel.hide()
         curses.panel.update_panels()
         del self.panel
+
+        curses.curs_set(0)
