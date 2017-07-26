@@ -1,3 +1,5 @@
+import shlex
+
 import curses
 import curses.panel
 
@@ -188,11 +190,12 @@ class MainWindow:
                     # it's a personal
                     # TODO: handle CCs
                     result.append((event,
-                        'zwrite {}'.format(message.sender)))
+                        'zwrite {}'.format(shlex.quote(message.sender))))
                 else:
                     result.append((event,
-                        'zwrite -c {} -i {} {}'.format(message.cls,
-                            message.instance, message.recipient)))
+                        'zwrite -c {} -i {} {}'.format(shlex.quote(message.cls),
+                            shlex.quote(message.instance),
+                            shlex.quote(message.recipient))))
         elif key == 'q':
             result.append(('quit', ))
         else:

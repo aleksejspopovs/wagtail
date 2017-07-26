@@ -8,7 +8,11 @@ from ui.utils import curse_string
 
 def parse_cmdline_into_events(cmdline):
     result = []
-    command, *args = shlex.split(cmdline) or ['']
+
+    try:
+        command, *args = shlex.split(cmdline) or ['']
+    except ValueError as error:
+        return [('status', 'Parsing error: {}'.format(error.args))]
 
     if command == '':
         pass
