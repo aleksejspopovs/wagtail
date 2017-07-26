@@ -14,7 +14,6 @@ def parse_cmdline_into_events(cmdline):
         pass
     elif command == 'zwrite':
         parser = StandaloneArgParser()
-        # TODO: add -C, -a/-d, -S, -s
         parser.add_argument('-c', '--class', default='MESSAGE',
             dest='class_')
         parser.add_argument('-i', '--instance', default='PERSONAL')
