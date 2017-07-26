@@ -16,6 +16,7 @@ def get_zgram_display_properties(zgram, is_current):
 
     # header
     auth = '' if zgram.auth else '!'
+    opcode = ' [{}]'.format(zgram.opcode) if zgram.opcode else ''
     zsig = ' ({})'.format(zgram.fields[0]) if len(zgram.fields) > 0 else ''
     date = _format_date(zgram.time or 0)
     sender = _pretty_print_principal(zgram.sender) if zgram.sender else ''
@@ -23,9 +24,9 @@ def get_zgram_display_properties(zgram, is_current):
 
     format = ''
     if zgram.cls.lower() == 'message':
-        format = '→{recipient} from {auth}{sender} {date}{zsig}'
+        format = '→{recipient} from {auth}{sender}{opcode} {date}{zsig}'
     else:
-        format = '{class_} / {instance} / {auth}{sender} {date}{zsig}'
+        format = '{class_} / {instance} / {auth}{sender}{opcode} {date}{zsig}'
 
     properties['header'] = format.format(
         class_=zgram.cls,
@@ -33,6 +34,7 @@ def get_zgram_display_properties(zgram, is_current):
         recipient=recipient,
         auth=auth,
         sender=sender,
+        opcode=opcode,
         date=date,
         zsig=zsig)
 
