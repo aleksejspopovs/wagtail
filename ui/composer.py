@@ -68,13 +68,14 @@ class ZephyrgramComposer:
         if self.top + self.editor_lines <= self.cursor_y:
             self.top = self.cursor_y
 
+        if self.cursor_x > len(self.buffer[self.cursor_y]):
+            self.cursor_x = len(self.buffer[self.cursor_y])
+
         if self.cursor_x < self.left:
             self.left = self.cursor_x
         if self.left + self.editor_cols <= self.cursor_x:
             self.left = self.cursor_x
 
-        if self.cursor_x > len(self.buffer[self.cursor_y]):
-            self.cursor_x = len(self.buffer[self.cursor_y])
 
         for y in range(self.editor_lines):
             if self.top + y >= len(self.buffer):
@@ -138,6 +139,8 @@ class ZephyrgramComposer:
         elif key == curses.KEY_DOWN:
             if self.cursor_y != len(self.buffer) - 1:
                 self.cursor_y += 1
+            else:
+                self.cursor_x = len(self.buffer[self.cursor_y])
         elif key == '\n':
             if ((self.cursor_y == len(self.buffer) - 1) and
                 (self.cursor_x == 1) and
