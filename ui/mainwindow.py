@@ -25,16 +25,52 @@ class MainWindow:
         self.lines = self.cols = 1
         self.panel = curses.panel.new_panel(self.window)
 
+        self.init_colors()
+
         self.top_index = self.current_index = self.last_visible_message = None
         self.update_size()
+
+    def init_colors(self):
+        self.colors = {
+            'default': -1,
+            'black': curses.COLOR_BLACK,
+            'blue': curses.COLOR_BLUE,
+            'cyan': curses.COLOR_CYAN,
+            'green': curses.COLOR_GREEN,
+            'magenta': curses.COLOR_MAGENTA,
+            'red': curses.COLOR_RED,
+            'white': curses.COLOR_RED,
+            'yellow': curses.COLOR_YELLOW
+        }
+
+        self.color_pairs = {}
+        i = 1
+        for fg in self.colors:
+            for bg in self.colors:
+                curses.init_pair(i, self.colors[fg], self.colors[bg])
+                self.color_pairs[fg, bg] = curses.color_pair(i)
+                i += 1
 
     def measure_message_height(self, message):
         return 2 + message.fields[1].rstrip().count('\n')
 
-    def draw_message(self, row, message):
+    def draw_message(self, row, message, is_current):
+        properties = self.config.get_zgram_display_properties(message,
+            is_current)
+        fg = properties.get('fg_color', 'default')
+        bg = properties.get('bg_color', 'default')
+        color_pair = self.color_pairs[fg, bg]
+
         self.window.addnstr(row, 2,
-            curse_string(self.config.format_zgram_header(message)),
+            curse_string(properties.get('header', 'ERROR no header returned')),
             self.cols - 2)
+        self.window.chgat(row, 0, -1, color_pair)
+        if is_current:
+            # we add the vertical line, then explicitly set the color for it
+            # (instead of doing chgat on the entire line after printing the
+            # line) because, for some reason, if we apply chgat to the pipe,
+            # it turns into an 'x'
+            self.window.addch(row, 0, curses.ACS_VLINE, color_pair)
 
         empty_row = row + 1
         for i, line in enumerate(message.fields[1].rstrip().split('\n'), 1):
@@ -42,6 +78,10 @@ class MainWindow:
                 break
 
             self.window.addnstr(row + i, 4, curse_string(line), self.cols - 4)
+            self.window.chgat(row + i, 0, -1, color_pair)
+            if is_current:
+                self.window.addch(row + i, 0, curses.ACS_VLINE, color_pair)
+
             empty_row = row + i + 1
 
         return empty_row
@@ -81,14 +121,8 @@ class MainWindow:
 
         start_row = 0
         for index, msg in messages:
-            next_start_row = self.draw_message(start_row, msg)
-
-            # current message indicator
-            if index == self.current_index:
-                self.window.vline(
-                    start_row, 0,
-                    curses.ACS_VLINE,
-                    next_start_row - start_row)
+            next_start_row = self.draw_message(start_row, msg,
+                index == self.current_index)
 
             self.last_visible_message = index
 
