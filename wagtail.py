@@ -93,8 +93,7 @@ class Wagtail:
             if zgram.cls.lower() == 'message':
                 # this is a personal message. we won't get it back, so
                 # we should save a copy.
-                # TODO: is it okay that sender is set to None?
-                #       what if the zgram actually fails to send?
+                # TODO: what if the zgram actually fails to send?
                 zgram.time = zgram.time or time.time()
                 zgram.sender = zgram.sender or get_principal()
                 self.db.append_message(zgram)
