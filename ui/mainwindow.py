@@ -163,8 +163,9 @@ class MainWindow:
             result.append(('quit', ))
         else:
             if isinstance(key, str):
-                raise Exception(key, [ord(x) for x in key])
+                result.append(('status', 'unknown key c{}'.format(
+                    [ord(x) for x in key])))
             else:
-                raise Exception(key)
+                result.append(('status', 'unknown key i{}'.format(key)))
 
         return result
