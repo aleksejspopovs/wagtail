@@ -63,10 +63,17 @@ class MainWindow:
         bg = properties.get('bg_color', 'default')
         color_pair = self.color_pairs[fg, bg]
 
-        self.window.addnstr(row, 2,
-            curse_string(properties.get('header', 'ERROR no header returned')),
-            self.cols - 2)
+        try:
+            self.window.addnstr(row, 2,
+                curse_string(properties.get('header', 'ERROR no header returned')),
+                self.cols - 2)
+        except curses.error:
+            # this might try printing onto the end of the last line of the
+            # window, which makes curses sad
+            pass
+
         self.window.chgat(row, 0, -1, color_pair)
+
         if is_current:
             # we add the vertical line, then explicitly set the color for it
             # (instead of doing chgat on the entire line after printing the
@@ -79,7 +86,13 @@ class MainWindow:
             if row + i == self.lines:
                 break
 
-            self.window.addnstr(row + i, 4, curse_string(line), self.cols - 4)
+            try:
+                self.window.addnstr(row + i, 4, curse_string(line), self.cols - 4)
+            except curses.error:
+                # this might try printing onto the end of the last line of the
+                # window, which makes curses sad
+                pass
+
             self.window.chgat(row + i, 0, -1, color_pair)
             if is_current:
                 self.window.addch(row + i, 0, curses.ACS_VLINE, color_pair)

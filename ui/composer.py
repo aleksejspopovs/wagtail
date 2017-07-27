@@ -63,7 +63,7 @@ class ZephyrgramComposer:
         try:
             self.window.addch(self.editor_lines + 1, self.editor_cols + 1,
                 curses.ACS_LRCORNER)
-        except curses.error as e:
+        except curses.error:
             pass
 
         if self.cursor_y < self.top:
