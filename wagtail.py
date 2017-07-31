@@ -153,6 +153,9 @@ class Wagtail:
         self.config.reload()
         self.main_window.redraw() # styling rules might've changed
 
+    def event_filter(self, new_filter):
+        self.main_window.set_filter(new_filter)
+
     def handle_events(self, events):
         for event, *event_args in events:
             # call self.event_{eventname}(*event_args)

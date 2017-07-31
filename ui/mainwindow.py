@@ -3,6 +3,7 @@ import shlex
 import curses
 import curses.panel
 
+from filtering import NopFilterSingleton, Filter
 from ui.utils import curse_string
 
 def take_up_to(it, n):
@@ -30,6 +31,7 @@ class MainWindow:
         self.init_colors()
 
         self.top_index = self.current_index = self.last_visible_message = None
+        self.filter = NopFilterSingleton
         self.update_size()
 
     def init_colors(self):
@@ -111,7 +113,7 @@ class MainWindow:
         self.window.erase()
 
         if self.current_index is None:
-            self.current_index = self.db.first_index()
+            self.current_index = self.db.first_index(filter=self.filter)
 
             if self.current_index is None:
                 self.window.noutrefresh()
@@ -126,8 +128,11 @@ class MainWindow:
 
         # every message takes at least 1 line, so we take $2 * self.lines$
         # messages, which is at least two screens worth of messages
-        messages = take_up_to(self.db.get_messages_starting_with(
-            self.top_index), 2 * self.lines)
+        messages = take_up_to(
+                self.db.get_messages_starting_with(
+                    self.top_index,
+                    filter=self.filter),
+                2 * self.lines)
 
         # we don't want the current message to ever start below the lower half
         # of the screen
@@ -164,7 +169,8 @@ class MainWindow:
             self.redraw()
             return
 
-        self.current_index = self.db.advance(self.current_index, delta)
+        self.current_index = self.db.advance(self.current_index, delta,
+            filter=self.filter)
 
         self.redraw()
 
@@ -178,6 +184,10 @@ class MainWindow:
 
         self.redraw()
 
+    def set_filter(self, new_filter):
+        self.filter = new_filter
+        self.redraw()
+
     def handle_keypress(self, key):
         result = []
 
@@ -186,22 +196,28 @@ class MainWindow:
         elif (key == curses.KEY_UP) or (key == 'k'):
             self.advance(-1)
         elif (key == '<') or (key == 'g'):
-            self.move_to(self.db.first_index())
+            self.move_to(self.db.first_index(filter=self.filter))
         elif (key == '>') or (key == 'G'):
-            self.move_to(self.db.last_index())
+            self.move_to(self.db.last_index(filter=self.filter))
         elif key == curses.KEY_PPAGE: # Previous Page
             # TODO: this does not actually work well, it just
             # scrolls up by one pretty much all the time
             if self.top_index is not None:
-                self.move_to(self.db.advance(self.top_index, -1))
+                self.move_to(self.db.advance(self.top_index, -1,
+                    filter=self.filter))
         elif key == curses.KEY_NPAGE: # Next Page
             if self.last_visible_message is not None:
-                self.move_to(self.db.advance(self.last_visible_message, +1))
+                self.move_to(self.db.advance(self.last_visible_message, +1,
+                    filter=self.filter))
         elif key == ':':
             result.append(('cmdline_open', ))
         elif key == 'z':
             result.append(('cmdline_open', 'zwrite '))
         elif (key == 'r') or (key == 'R'):
+            if self.current_index is None:
+                return result
+
+            # TODO: add a key for "send personal to sender of this message"
             message = self.db.get_message(self.current_index)
             if message is not None:
                 event = 'cmdline_exec' if key == 'r' else 'cmdline_open'
@@ -215,6 +231,30 @@ class MainWindow:
                         'zwrite -c {} -i {} {}'.format(shlex.quote(message.cls),
                             shlex.quote(message.instance),
                             shlex.quote(message.recipient))))
+        elif key == 'f':
+            result.append(('cmdline_open', 'filter '))
+        elif key == 'F':
+            result.append(('filter', NopFilterSingleton))
+        elif key == 'n':
+            if self.current_index is None:
+                return result
+
+            # TODO: make this useful for personals
+            message = self.db.get_message(self.current_index)
+            filter_string = "(class_ is {}) and (instance is {})".format(
+                repr('*' + message.cls), repr('*' + message.instance + '*'))
+            new_filter = Filter(filter_string)
+
+            result.append(('filter', new_filter))
+        elif key == 'N':
+            if self.current_index is None:
+                return result
+
+            message = self.db.get_message(self.current_index)
+            filter_string = "class_ is {}".format(repr('*' + message.cls))
+            new_filter = Filter(filter_string)
+
+            result.append(('filter', new_filter))
         elif key == 'q':
             result.append(('quit', ))
         else:

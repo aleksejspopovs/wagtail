@@ -2,6 +2,7 @@ import sqlite3
 
 from zpipe.python.zpipe import Zephyrgram
 
+from filtering import NopFilterSingleton
 from util import take_unprefix
 
 class Database:
@@ -63,15 +64,6 @@ class Database:
 
             assert version == 1
 
-    def populate_with_test_data(self):
-        with self.db:
-            for i in range(100):
-                self.db.execute('''
-                    INSERT INTO messages
-                    VALUES (NULL, 'aleksejs@ATHENA.MIT.EDU',
-                            'aleksejs', 'hello', NULL, '', 1,
-                            ?, 0)''', b'zsig!\x00hello {}'.format(i))
-
     def get_message(self, index):
         cursor = self.db.execute('SELECT * FROM messages WHERE id=?', (index, ))
         result = cursor.fetchone()
@@ -101,43 +93,50 @@ class Database:
         return (None, msg.sender, msg.cls, msg.instance, msg.recipient,
             msg.opcode, msg.auth, fields, msg.time)
 
-    def first_index(self):
+    def first_index(self, filter=NopFilterSingleton):
         # returns None on empty database
-        return self.db.execute('SELECT min(id) FROM messages').fetchone()[0]
+        return self.db.execute('SELECT min(id) FROM messages WHERE {}'
+            .format(filter.to_sql())).fetchone()[0]
 
-    def last_index(self):
+    def last_index(self, filter=NopFilterSingleton):
         # returns None on empty database
-        return self.db.execute('SELECT max(id) FROM messages').fetchone()[0]
+        return self.db.execute('SELECT max(id) FROM messages WHERE {}'
+            .format(filter.to_sql())).fetchone()[0]
 
-    def advance(self, index, delta):
+    def advance(self, index, delta, filter=NopFilterSingleton):
         if delta == 0:
             return index
         elif delta < 0:
             result = self.db.execute('''
                 SELECT id FROM messages
                 WHERE id < ?
+                AND {}
                 ORDER BY id DESC
-                LIMIT 1 OFFSET ?''', (index, abs(delta) - 1)).fetchone()
+                LIMIT 1 OFFSET ?'''.format(filter.to_sql()),
+                (index, abs(delta) - 1)).fetchone()
 
             if result is None:
-                return self.first_index()
+                return index
             return result[0]
         elif delta > 0:
             result = self.db.execute('''
                 SELECT id FROM messages
                 WHERE id > ?
+                AND {}
                 ORDER BY id ASC
-                LIMIT 1 OFFSET ?''', (index, delta - 1)).fetchone()
+                LIMIT 1 OFFSET ?'''.format(filter.to_sql()),
+                (index, delta - 1)).fetchone()
 
             if result is None:
-                return self.last_index()
+                return index
             return result[0]
 
-    def get_messages_starting_with(self, index):
+    def get_messages_starting_with(self, index, filter=NopFilterSingleton):
         cursor = self.db.execute('''
             SELECT * FROM messages
             WHERE id >= ?
-            ORDER BY id ASC''', (index, ))
+            AND {}
+            ORDER BY id ASC'''.format(filter.to_sql()), (index, ))
 
         row = cursor.fetchone()
         while row is not None:
