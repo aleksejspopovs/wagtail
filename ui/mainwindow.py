@@ -235,7 +235,7 @@ class MainWindow:
             message = self.db.get_message(self.current_index)
             if message is not None:
                 event = 'cmdline_exec' if key == 'r' else 'cmdline_open'
-                if (message.cls.lower() == 'message'):
+                if (message.cls == 'MESSAGE'):
                     # it's a personal
                     # TODO: handle CCs
                     result.append((event,

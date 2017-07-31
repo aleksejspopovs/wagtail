@@ -23,7 +23,7 @@ def get_zgram_display_properties(zgram, is_current):
     recipient = _pretty_print_principal(zgram.recipient)
 
     format = ''
-    if zgram.cls.lower() == 'message':
+    if zgram.cls == 'MESSAGE':
         format = '→{recipient} from {auth}{sender}{opcode} {date}{zsig}'
     else:
         format = '{class_} / {instance} / {auth}{sender}{opcode} {date}{zsig}'
@@ -39,7 +39,7 @@ def get_zgram_display_properties(zgram, is_current):
         zsig=zsig)
 
     # coloring
-    if zgram.cls.lower() == 'message':
+    if zgram.cls == 'MESSAGE':
         properties['bg_color'] = 'magenta'
 
     return properties
