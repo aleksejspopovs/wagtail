@@ -62,6 +62,7 @@ def parse_cmdline_into_events(cmdline):
         if len(args) == 0:
             result.append(('filter', NopFilterSingleton))
         elif len(args) == 1:
+            # TODO: try to eliminate need for quotes around filter
             try:
                 new_filter = Filter(args[0])
             except SyntaxError as error:

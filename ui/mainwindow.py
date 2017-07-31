@@ -19,10 +19,11 @@ def take_up_to(it, n):
 
 
 class MainWindow:
-    def __init__(self, screen, db, config):
+    def __init__(self, screen, db, config, status_bar):
         self.db = db
         self.config = config
         self.screen = screen
+        self.status_bar = status_bar
         # the size doesn't matter because of the call to update_size() below
         self.window = curses.newwin(1, 1, 0, 0)
         self.lines = self.cols = 1
@@ -159,6 +160,18 @@ class MainWindow:
 
         self.window.noutrefresh()
 
+        # we should also update the status bar
+        messages_below = self.db.count_messages_after(self.current_index,
+            filter=self.filter)
+        messages_below_total = messages_below
+        filter_name = None
+        if self.filter is not NopFilterSingleton:
+            messages_below_total = self.db.count_messages_after(
+                self.current_index)
+            filter_name = self.filter.code
+        self.status_bar.update_display(messages_below, messages_below_total,
+            filter_name)
+
     def move_to(self, index):
         self.current_index = index
 
@@ -176,7 +189,7 @@ class MainWindow:
 
     def update_size(self):
         self.lines, self.cols = self.screen.getmaxyx()
-        self.lines -= 1 # for status bar
+        self.lines -= 2 # for status bar
 
         self.window.resize(self.lines, self.cols)
 
@@ -185,6 +198,7 @@ class MainWindow:
         self.redraw()
 
     def set_filter(self, new_filter):
+        # TODO: focus is kind of broken after changing filters
         self.filter = new_filter
         self.redraw()
 

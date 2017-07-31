@@ -97,7 +97,7 @@ class ZephyrgramComposer:
         screen_lines, screen_cols = self.screen.getmaxyx()
 
         self.window.resize(self.editor_lines + 2, self.editor_cols + 2)
-        self.panel.move(screen_lines - (self.editor_lines + 2) - 1,
+        self.panel.move(screen_lines - (self.editor_lines + 2) - 2,
             screen_cols - self.editor_cols - 2)
 
         curses.panel.update_panels()

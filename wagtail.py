@@ -173,7 +173,8 @@ class Wagtail:
         curses.curs_set(0)
 
         self.status_bar = StatusBar(screen)
-        self.main_window = MainWindow(screen, self.db, self.config)
+        self.main_window = MainWindow(screen, self.db, self.config,
+            self.status_bar)
         curses.doupdate()
 
         # this window stack kind of duplicates the one kept by

@@ -143,6 +143,13 @@ class Database:
             yield (row[0], self._tuple_to_zephyrgram(row))
             row = cursor.fetchone()
 
+    def count_messages_after(self, index, filter=NopFilterSingleton):
+        result, = self.db.execute('''
+            SELECT count(*) FROM messages
+            WHERE id > ?
+            AND {}'''.format(filter.to_sql()), (index, )).fetchone()
+        return result
+
     def get_subscriptions(self, expand_un=True):
         cursor = self.db.execute('SELECT * FROM subscriptions')
 
