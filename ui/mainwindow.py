@@ -54,6 +54,8 @@ class MainWindow:
                 i += 1
 
     def measure_message_height(self, message):
+        if len(message.fields) < 2:
+            return 2 + 1
         return 2 + message.fields[1].rstrip().count('\n')
 
     def draw_message(self, row, message, is_current):
@@ -81,8 +83,12 @@ class MainWindow:
             # it turns into an 'x'
             self.window.addch(row, 0, curses.ACS_VLINE, color_pair)
 
+        body = '<wagtail message: empty body>'
+        if len(message.fields) >= 2:
+            body = message.fields[1]
+
         empty_row = row + 1
-        for i, line in enumerate(message.fields[1].rstrip().split('\n'), 1):
+        for i, line in enumerate(body.rstrip().split('\n'), 1):
             if row + i == self.lines:
                 break
 
