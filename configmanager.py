@@ -8,12 +8,8 @@ import sys
 EXPECTED_CONFIG_VERSION = 1
 
 class ConfigManager:
-    def __init__(self):
-        if os.getenv('XDG_CONFIG_HOME') is not None:
-            self.path = os.path.join(os.getenv('XDG_CONFIG_HOME'), 'wagtail',
-                'config.py')
-        else:
-            self.path = os.path.expanduser('~/.config/wagtail/config.py')
+    def __init__(self, app):
+        self.path = app.get_config_path()
 
         os.makedirs(os.path.dirname(self.path), exist_ok=True)
 

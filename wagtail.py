@@ -23,8 +23,10 @@ SIGWINCH = 28
 
 class Wagtail:
     def __init__(self):
-        self.config = ConfigManager()
-        self.db = Database()
+        self.principal = get_principal()
+
+        self.config = ConfigManager(self)
+        self.db = Database(self)
 
         self.zgram_queue = queue.Queue()
         self.error_queue = queue.Queue()
@@ -40,7 +42,6 @@ class Wagtail:
             self.error_queue.put(error)
             os.kill(os.getpid(), SIGWINCH)
 
-        self.principal = get_principal()
 
         self.zpipe = zpipe.ZPipe(['./zpipe/zpipe'],
             zgram_handler, error_handler)
@@ -55,6 +56,18 @@ class Wagtail:
     def __exit__(self, exc_type, exc_value, traceback):
         self.db.close()
         self.zpipe.close()
+
+    def get_config_path(self):
+        if os.getenv('XDG_CONFIG_HOME') is not None:
+            return os.path.join(os.getenv('XDG_CONFIG_HOME'), 'wagtail',
+                'config.py')
+        return os.path.expanduser('~/.config/wagtail/config.py')
+
+    def get_database_path(self):
+        if os.getenv('XDG_CONFIG_HOME') is not None:
+            return os.path.join(os.getenv('XDG_CONFIG_HOME'), 'wagtail',
+                'database.sqlite3')
+        return os.path.expanduser('~/.config/wagtail/database.sqlite3')
 
     def event_quit(self):
         self.should_quit = True

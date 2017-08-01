@@ -6,11 +6,10 @@ from filtering import NopFilterSingleton
 from util import take_unprefix
 
 class Database:
-    def __init__(self):
-        self.db = sqlite3.connect('/tmp/messages.sqlite3')
+    def __init__(self, app):
+        self.db = sqlite3.connect(app.get_database_path())
 
         self.initialize_schema()
-        # self.populate_with_test_data()
 
     def __enter__(self):
         return self
