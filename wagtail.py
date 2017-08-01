@@ -87,9 +87,9 @@ class Wagtail:
         self.status_bar.set_status(text)
 
     def event_zwrite(self, opts):
-        if ((opts.class_ == 'MESSAGE') and
-            ((opts.instance == 'PERSONAL') or
-            (opts.instance == 'URGENT')) and
+        if ((opts.class_.lower() == 'message') and
+            ((opts.instance.lower() == 'personal') or
+            (opts.instance.lower() == 'urgent')) and
             (len(opts.recipients) == 0)):
             self.status_bar.set_status(
                 'Cannot send personal message with no recipient.')
