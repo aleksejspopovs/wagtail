@@ -104,7 +104,7 @@ class Wagtail:
         for zgram in zgrams:
             self.zpipe.zwrite(zgram)
 
-            if zgram.cls == 'MESSAGE':
+            if zgram.cls.lower() == 'message':
                 # this is a personal message. we won't get it back, so
                 # we should save a copy.
                 # TODO: what if the zgram actually fails to send?
