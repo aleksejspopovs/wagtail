@@ -117,6 +117,17 @@ class MainWindow:
             self.current_index = self.db.first_index(filter=self.filter)
 
             if self.current_index is None:
+                # there are no messages, but we should still update the
+                # status bar
+
+                messages_below = 0
+                messages_below_total = self.db.count_messages_after(-1)
+                filter_name = None
+                if self.filter is not NopFilterSingleton:
+                    filter_name = self.filter.code
+                self.status_bar.update_display(messages_below, messages_below_total,
+                    filter_name)
+
                 self.window.noutrefresh()
                 return
 
