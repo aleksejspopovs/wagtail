@@ -104,8 +104,22 @@ class Database:
             .format(filter.to_sql())).fetchone()[0]
 
     def advance(self, index, delta, filter=NopFilterSingleton):
+        # index might not refer to an existing rowid (or one that is
+        # accepted by the given filter), but the result must.
+        # thus advance(index, 0) is a valid way to find a rowid closest
+        # to the rowid of a potentially deleted/hidden message.
         if delta == 0:
-            return index
+            result = self.db.execute('''
+                SELECT id FROM messages
+                WHERE id >= ?
+                AND {}
+                ORDER BY id ASC
+                LIMIT 1'''.format(filter.to_sql()), (index, )).fetchone()
+
+            if result is None:
+                return self.last_index(filter=filter)
+
+            return result[0]
         elif delta < 0:
             result = self.db.execute('''
                 SELECT id FROM messages
@@ -116,7 +130,7 @@ class Database:
                 (index, abs(delta) - 1)).fetchone()
 
             if result is None:
-                return index
+                return self.first_index(filter=filer)
             return result[0]
         elif delta > 0:
             result = self.db.execute('''
@@ -128,7 +142,7 @@ class Database:
                 (index, delta - 1)).fetchone()
 
             if result is None:
-                return index
+                return self.last_index(filter=filter)
             return result[0]
 
     def get_messages_starting_with(self, index, filter=NopFilterSingleton):

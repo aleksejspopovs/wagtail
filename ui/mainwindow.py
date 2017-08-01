@@ -135,6 +135,14 @@ class MainWindow:
                     filter=self.filter),
                 2 * self.lines)
 
+        if not any(idx == self.current_index for idx, _ in messages):
+            # if the current message is not in this list at all,
+            # we give up and put the current message at top
+            # (this happens when a filter is changed)
+            self.top_index = self.current_index
+            self.redraw()
+            return
+
         # we don't want the current message to ever start below the lower half
         # of the screen
         current_start = sum(self.measure_message_height(msg) for
@@ -198,8 +206,12 @@ class MainWindow:
         self.redraw()
 
     def set_filter(self, new_filter):
-        # TODO: focus is kind of broken after changing filters
         self.filter = new_filter
+        if self.current_index is not None:
+            # the current message might not be visible any more, so we replace
+            # it by the closest message that is
+            self.current_index = self.db.advance(self.current_index, 0,
+                filter=self.filter)
         self.redraw()
 
     def handle_keypress(self, key):
