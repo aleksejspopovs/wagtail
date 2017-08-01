@@ -111,7 +111,7 @@ class Database:
             result = self.db.execute('''
                 SELECT id FROM messages
                 WHERE id >= ?
-                AND {}
+                AND ({})
                 ORDER BY id ASC
                 LIMIT 1'''.format(filter.to_sql()), (index, )).fetchone()
 
@@ -123,7 +123,7 @@ class Database:
             result = self.db.execute('''
                 SELECT id FROM messages
                 WHERE id < ?
-                AND {}
+                AND ({})
                 ORDER BY id DESC
                 LIMIT 1 OFFSET ?'''.format(filter.to_sql()),
                 (index, abs(delta) - 1)).fetchone()
@@ -135,7 +135,7 @@ class Database:
             result = self.db.execute('''
                 SELECT id FROM messages
                 WHERE id > ?
-                AND {}
+                AND ({})
                 ORDER BY id ASC
                 LIMIT 1 OFFSET ?'''.format(filter.to_sql()),
                 (index, delta - 1)).fetchone()
@@ -148,7 +148,7 @@ class Database:
         cursor = self.db.execute('''
             SELECT * FROM messages
             WHERE id >= ?
-            AND {}
+            AND ({})
             ORDER BY id ASC'''.format(filter.to_sql()), (index, ))
 
         row = cursor.fetchone()
@@ -160,7 +160,7 @@ class Database:
         result, = self.db.execute('''
             SELECT count(*) FROM messages
             WHERE id > ?
-            AND {}'''.format(filter.to_sql()), (index, )).fetchone()
+            AND ({})'''.format(filter.to_sql()), (index, )).fetchone()
         return result
 
     def get_subscriptions(self, expand_un=True):
