@@ -24,6 +24,7 @@ class MainWindow:
         self.config = app.config
         self.screen = app.screen
         self.status_bar = app.status_bar
+        self.principal = app.principal
         # the size doesn't matter because of the call to update_size() below
         self.window = curses.newwin(1, 1, 0, 0)
         self.lines = self.cols = 1
@@ -258,11 +259,15 @@ class MainWindow:
             message = self.db.get_message(self.current_index)
             if message is not None:
                 event = 'cmdline_exec' if key == 'r' else 'cmdline_open'
-                if (message.cls.lower() == 'message'):
+                if message.cls.lower() == 'message':
                     # it's a personal
                     # TODO: handle CCs
+                    other_person = message.sender
+                    if (other_person == self.principal) or (other_person is None):
+                        other_person = message.recipient
+
                     result.append((event,
-                        'zwrite {}'.format(shlex.quote(message.sender))))
+                        'zwrite {}'.format(shlex.quote(other_person))))
                 else:
                     result.append((event,
                         'zwrite -c {} -i {} {}'.format(shlex.quote(message.cls),
@@ -276,10 +281,17 @@ class MainWindow:
             if self.current_index is None:
                 return result
 
-            # TODO: make this useful for personals
             message = self.db.get_message(self.current_index)
-            filter_string = "(class_ is {}) and (instance is {})".format(
+            filter_string = '(class_ is {}) and (instance is {})'.format(
                 repr('*' + message.cls), repr('*' + message.instance + '*'))
+            if message.cls.lower() == 'message':
+                other_person = message.sender
+                if (other_person == self.principal) or (other_person is None):
+                    other_person = message.recipient
+                filter_string = (('(class_ is \'message\') and '
+                    '((sender is {}) or (recipient is {}))')
+                    .format(repr(other_person), repr(other_person)))
+
             new_filter = Filter(filter_string)
 
             result.append(('filter', new_filter))

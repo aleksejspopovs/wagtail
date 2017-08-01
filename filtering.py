@@ -49,6 +49,9 @@ class Filter:
                 raise SyntaxError('multiple comparisons are not supported')
 
             op = ''
+            # we need special handling for GLOB and NOT GLOB to make them
+            # case-insensitive
+            lower = False
             if isinstance(root.ops[0], ast.Eq):
                 op = '='
             elif isinstance(root.ops[0], ast.NotEq):
@@ -63,13 +66,19 @@ class Filter:
                 op = '>='
             elif isinstance(root.ops[0], ast.Is):
                 op = 'GLOB'
+                lower = True
             elif isinstance(root.ops[0], ast.IsNot):
                 op = 'NOT GLOB'
+                lower = True
             else:
                 raise SyntaxError('unknown comparison operation')
 
-            return '({}) {} ({})'.format(self._to_sql(root.left), op,
-                self._to_sql(root.comparators[0]))
+            if lower:
+                return 'lower({}) {} lower({})'.format(self._to_sql(root.left),
+                    op, self._to_sql(root.comparators[0]))
+            else:
+                return '({}) {} ({})'.format(self._to_sql(root.left), op,
+                    self._to_sql(root.comparators[0]))
         else:
             raise SyntaxError('unknown syntax tree node {}'
                 .format(ast.dump(root)))
