@@ -26,15 +26,23 @@ class Filter:
             # a value to a variable or deleting it
             assert isinstance(root.ctx, ast.Load)
 
-            fields = ['class_', 'instance', 'recipient', 'sender', 'opcode']
-            if root.id not in fields:
+            field_map = {
+                'class_': 'class',
+                'cla': 'class',
+                'instance': 'instance',
+                'ins': 'instance',
+                'recipient': 'recipient',
+                'rec': 'recipient',
+                'sender': 'sender',
+                'sen': 'sender',
+                'opcode': 'opcode',
+                'opc': 'opcode'
+            }
+
+            if root.id not in field_map:
                 raise SyntaxError('unknown field {}'.format(root.id))
 
-            field_name = root.id
-            if field_name == 'class_':
-                field_name = 'class'
-
-            return field_name
+            return field_map[root.id]
         elif isinstance(root, ast.UnaryOp):
             if not isinstance(root.op, ast.Not):
                 raise SyntaxError('invalid unary operator')
