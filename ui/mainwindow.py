@@ -19,11 +19,11 @@ def take_up_to(it, n):
 
 
 class MainWindow:
-    def __init__(self, screen, db, config, status_bar):
-        self.db = db
-        self.config = config
-        self.screen = screen
-        self.status_bar = status_bar
+    def __init__(self, app):
+        self.db = app.db
+        self.config = app.config
+        self.screen = app.screen
+        self.status_bar = app.status_bar
         # the size doesn't matter because of the call to update_size() below
         self.window = curses.newwin(1, 1, 0, 0)
         self.lines = self.cols = 1

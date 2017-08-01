@@ -4,8 +4,8 @@ import curses.panel
 from ui.utils import curse_string
 
 class StatusBar:
-    def __init__(self, screen):
-        self.screen = screen
+    def __init__(self, app):
+        self.screen = app.screen
         # the position & size really doesn't matter
         # because of the call to update_size() below
         self.window = curses.newwin(1, 1, 0, 0)

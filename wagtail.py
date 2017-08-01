@@ -40,10 +40,12 @@ class Wagtail:
             self.error_queue.put(error)
             os.kill(os.getpid(), SIGWINCH)
 
+        self.principal = get_principal()
+
         self.zpipe = zpipe.ZPipe(['./zpipe/zpipe'],
             zgram_handler, error_handler)
 
-        self.zpipe.subscribe('message', '*', get_principal())
+        self.zpipe.subscribe('message', '*', self.principal)
         for class_, instance, recipient, _ in self.db.get_subscriptions():
             self.zpipe.subscribe(class_, instance, recipient)
 
@@ -58,7 +60,7 @@ class Wagtail:
         self.should_quit = True
 
     def event_cmdline_open(self, initial_input=''):
-        self.window_stack.append(CommandLine(self.screen, initial_input))
+        self.window_stack.append(CommandLine(self, initial_input))
 
     def event_cmdline_close(self):
         assert isinstance(self.window_stack[-1], CommandLine)
@@ -79,8 +81,7 @@ class Wagtail:
             self.status_bar.set_status(
                 'Cannot send personal message with no recipient.')
         else:
-            self.window_stack.append(ZephyrgramComposer(self.screen,
-                self.config, opts))
+            self.window_stack.append(ZephyrgramComposer(self, opts))
 
     def event_composer_close(self):
         assert(isinstance(self.window_stack[-1], ZephyrgramComposer))
@@ -95,7 +96,7 @@ class Wagtail:
                 # we should save a copy.
                 # TODO: what if the zgram actually fails to send?
                 zgram.time = zgram.time or time.time()
-                zgram.sender = zgram.sender or get_principal()
+                zgram.sender = zgram.sender or self.principal
                 self.db.append_message(zgram)
 
         self.main_window.redraw() # to display the personals
@@ -172,9 +173,8 @@ class Wagtail:
         curses.use_default_colors()
         curses.curs_set(0)
 
-        self.status_bar = StatusBar(screen)
-        self.main_window = MainWindow(screen, self.db, self.config,
-            self.status_bar)
+        self.status_bar = StatusBar(self)
+        self.main_window = MainWindow(self)
         curses.doupdate()
 
         # this window stack kind of duplicates the one kept by

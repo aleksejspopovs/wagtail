@@ -84,8 +84,8 @@ def parse_cmdline_into_events(cmdline):
 
 
 class CommandLine:
-    def __init__(self, screen, initial_input=''):
-        self.screen = screen
+    def __init__(self, app, initial_input=''):
+        self.screen = app.screen
         # the position & size really doesn't matter
         # because of the call to update_size() below
         self.window = curses.newwin(1, 1, 0, 0)

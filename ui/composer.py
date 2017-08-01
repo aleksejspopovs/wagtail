@@ -15,9 +15,9 @@ def count_while(f, lst):
     return res
 
 class ZephyrgramComposer:
-    def __init__(self, screen, config, zwrite_opts):
-        self.screen = screen
-        self.config = config
+    def __init__(self, app, zwrite_opts):
+        self.screen = app.screen
+        self.config = app.config
         # the position & size really doesn't matter
         # because of the call to update_size() below
         self.window = curses.newwin(1, 1, 0, 0)
