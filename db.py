@@ -129,7 +129,7 @@ class Database:
                 (index, abs(delta) - 1)).fetchone()
 
             if result is None:
-                return self.first_index(filter=filer)
+                return self.first_index(filter=filter)
             return result[0]
         elif delta > 0:
             result = self.db.execute('''
