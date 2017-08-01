@@ -28,11 +28,17 @@ class StatusBar:
             self.window.addstr(0, 0,
                 curse_string('{} below'.format(self.below)))
         else:
-            self.window.addstr(0, 0,
-                curse_string('{} ({}) below'.format(self.below,
-                    self.below_unfiltered)))
-            self.window.addstr(0, self.cols - len(self.filter_name),
-                curse_string(self.filter_name))
+            below_string = '{} ({}) below'.format(self.below,
+                    self.below_unfiltered)
+            self.window.addstr(0, 0, curse_string(below_string))
+
+            available_cols = self.cols - len(below_string) - 1
+            filter_name_trunc = self.filter_name
+            if len(filter_name_trunc) > available_cols:
+                filter_name_trunc = filter_name_trunc[:available_cols - 3] + '...'
+
+            self.window.addstr(0, self.cols - len(filter_name_trunc),
+                curse_string(filter_name_trunc))
 
         version = 'wagtail'
 
