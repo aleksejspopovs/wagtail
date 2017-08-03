@@ -135,7 +135,7 @@ class Wagtail:
                 ('Error: either not subscribed, or trying to unsubscribe '
                  'from unclass.'))
         else:
-            for args in new_subs:
+            for args in unsubs:
                 self.zpipe.unsubscribe(*args)
             self.status_bar.set_status('Unsubscribed successfully.')
 
