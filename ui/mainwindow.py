@@ -58,9 +58,7 @@ class MainWindow:
                 i += 1
 
     def measure_message_height(self, message):
-        if len(message.fields) < 2:
-            return 2 + 1
-        return 2 + message.fields[1].rstrip().count('\n')
+        return 2 + message.body.rstrip().count('\n')
 
     def draw_message(self, row, message, is_current):
         properties = self.config.get_zgram_display_properties(message,
@@ -87,12 +85,8 @@ class MainWindow:
             # it turns into an 'x'
             self.window.addch(row, 0, curses.ACS_VLINE, color_pair)
 
-        body = '<wagtail message: empty body>'
-        if len(message.fields) >= 2:
-            body = message.fields[1]
-
         empty_row = row + 1
-        for i, line in enumerate(body.rstrip().split('\n'), 1):
+        for i, line in enumerate(message.body.rstrip().split('\n'), 1):
             if row + i == self.lines:
                 break
 
@@ -147,7 +141,7 @@ class MainWindow:
                     filter=self.filter),
                 2 * self.lines)
 
-        if not any(idx == self.current_index for idx, _ in messages):
+        if not any(msg.rowid == self.current_index for msg in messages):
             # if the current message is not in this list at all,
             # we give up and put the current message at top
             # (this happens when a filter is changed)
@@ -158,20 +152,20 @@ class MainWindow:
         # we don't want the current message to ever start below the lower half
         # of the screen
         current_start = sum(self.measure_message_height(msg) for
-            idx, msg in messages
-            if idx < self.current_index)
+            msg in messages
+            if msg.rowid < self.current_index)
 
         while current_start * 2 > self.lines:
-            current_start -= self.measure_message_height(messages[0][1])
+            current_start -= self.measure_message_height(messages[0])
             messages = messages[1:]
-            self.top_index = messages[0][0]
+            self.top_index = messages[0].rowid
 
         start_row = 0
-        for index, msg in messages:
+        for msg in messages:
             next_start_row = self.draw_message(start_row, msg,
-                index == self.current_index)
+                msg.rowid == self.current_index)
 
-            self.last_visible_message = index
+            self.last_visible_message = msg.rowid
 
             if next_start_row == self.lines:
                 break
@@ -259,7 +253,7 @@ class MainWindow:
             message = self.db.get_message(self.current_index)
             if message is not None:
                 event = 'cmdline_exec' if key == 'r' else 'cmdline_open'
-                if message.cls.lower() == 'message':
+                if message.is_personal():
                     # it's a personal
                     # TODO: handle CCs
                     other_person = message.sender
@@ -270,7 +264,8 @@ class MainWindow:
                         'zwrite {}'.format(shlex.quote(other_person))))
                 else:
                     result.append((event,
-                        'zwrite -c {} -i {} {}'.format(shlex.quote(message.cls),
+                        'zwrite -c {} -i {} {}'.format(
+                            shlex.quote(message.class_),
                             shlex.quote(message.instance),
                             shlex.quote(message.recipient))))
         elif key == 'f':
@@ -283,8 +278,8 @@ class MainWindow:
 
             message = self.db.get_message(self.current_index)
             filter_string = '(cla is {}) and (ins is {})'.format(
-                repr('*' + message.cls), repr('*' + message.instance + '*'))
-            if message.cls.lower() == 'message':
+                repr('*' + message.class_), repr('*' + message.instance + '*'))
+            if message.is_personal():
                 other_person = message.sender
                 if (other_person == self.principal) or (other_person is None):
                     other_person = message.recipient
@@ -300,7 +295,7 @@ class MainWindow:
                 return result
 
             message = self.db.get_message(self.current_index)
-            filter_string = "cla is {}".format(repr('*' + message.cls))
+            filter_string = "cla is {}".format(repr('*' + message.class_))
             new_filter = Filter(filter_string)
 
             result.append(('filter', new_filter))

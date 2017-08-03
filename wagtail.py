@@ -7,6 +7,8 @@ import sys
 import termios
 import time
 
+from datetime import datetime
+
 from zpipe.python import zpipe
 
 from configmanager import ConfigManager
@@ -16,6 +18,7 @@ from ui.composer import ZephyrgramComposer
 from ui.mainwindow import MainWindow
 from ui.statusbar import StatusBar
 from util import get_principal, take_unprefix
+from zephyrgram import Zephyrgram
 
 # value assigned to the SIGWINCH signal in Linux on x86, arm, sparc and
 # most other architectures, according to the manpage signal(7)
@@ -102,13 +105,13 @@ class Wagtail:
 
     def event_send_zephyrgrams(self, zgrams):
         for zgram in zgrams:
-            self.zpipe.zwrite(zgram)
+            self.zpipe.zwrite(zgram.to_zpipe())
 
-            if zgram.cls.lower() == 'message':
+            if zgram.is_personal():
                 # this is a personal message. we won't get it back, so
                 # we should save a copy.
                 # TODO: what if the zgram actually fails to send?
-                zgram.time = zgram.time or time.time()
+                zgram.time = zgram.time or datetime.now()
                 zgram.sender = zgram.sender or self.principal
                 self.db.append_message(zgram)
 
@@ -206,13 +209,13 @@ class Wagtail:
                 # (see __init__) notifying us that we have new zephyrgrams
                 # to take from the queue
                 while not self.zgram_queue.empty():
-                    zgram = self.zgram_queue.get()
+                    zgram = Zephyrgram.from_zpipe(self.zgram_queue.get())
                     self.db.append_message(zgram)
 
                     # if this is in class 'ununclass', and we aren't yet
                     # subscribed to 'unununclass', do so
-                    undepth, class_stripped = take_unprefix(zgram.cls)
-                    new_unclass = 'un' + zgram.cls
+                    undepth, class_stripped = take_unprefix(zgram.class_)
+                    new_unclass = 'un' + zgram.class_
                     for instance, recipient in self.db.update_undepth(
                         class_stripped, undepth + 1):
                         self.zpipe.subscribe(new_unclass, instance, recipient)

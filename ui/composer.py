@@ -3,7 +3,7 @@ import curses.panel
 
 from ui.utils import curse_string
 
-from zpipe.python.zpipe import Zephyrgram
+from zephyrgram import Zephyrgram
 
 def count_while(f, lst):
     res = 0
@@ -162,14 +162,16 @@ class ZephyrgramComposer:
 
                 result.append(('composer_close', ))
                 result.append(('send_zephyrgrams',
-                    [Zephyrgram(self.zwrite_opts.sender,
-                        self.zwrite_opts.class_,
-                        self.zwrite_opts.instance,
-                        recipient,
-                        self.zwrite_opts.opcode,
-                        not self.zwrite_opts.deauth,
-                        [zsig, body],
-                        None)
+                    [Zephyrgram(rowid=None,
+                        sender=self.zwrite_opts.sender,
+                        class_=self.zwrite_opts.class_,
+                        instance=self.zwrite_opts.instance,
+                        recipient=recipient,
+                        opcode=self.zwrite_opts.opcode,
+                        auth=not self.zwrite_opts.deauth,
+                        signature=zsig,
+                        body=body,
+                        time=None)
                      for recipient in recipients]))
 
             self.buffer[self.cursor_y], new_line = \

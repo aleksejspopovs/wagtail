@@ -36,7 +36,11 @@ class Filter:
                 'sender': 'sender',
                 'sen': 'sender',
                 'opcode': 'opcode',
-                'opc': 'opcode'
+                'opc': 'opcode',
+                'signature': 'signature',
+                'sig': 'signature',
+                'body': 'body',
+                'bod': 'body'
             }
 
             if root.id not in field_map:

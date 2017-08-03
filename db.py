@@ -1,13 +1,17 @@
 import sqlite3
 
-from zpipe.python.zpipe import Zephyrgram
-
 from filtering import NopFilterSingleton
 from util import take_unprefix
+from zephyrgram import Zephyrgram
 
 class Database:
     def __init__(self, app):
-        self.db = sqlite3.connect(app.get_database_path())
+        self.db = sqlite3.connect(app.get_database_path(),
+            detect_types=sqlite3.PARSE_DECLTYPES)
+        self.db.row_factory = sqlite3.Row
+
+        sqlite3.register_converter('BOOL', lambda x: bool(int(x)))
+        sqlite3.register_adapter(bool, lambda x: int(x))
 
         self.initialize_schema()
 
@@ -41,14 +45,15 @@ class Database:
                 self.db.execute('''
                     CREATE TABLE messages
                     (id INTEGER PRIMARY KEY,
-                     sender TEXT,
+                     sender TEXT NOT NULL,
                      class TEXT NOT NULL,
                      instance TEXT NOT NULL,
                      recipient TEXT,
                      opcode TEXT NOT NULL,
-                     auth INTEGER,
-                     fields BLOB,
-                     time INT)''')
+                     auth BOOL,
+                     time TIMESTAMP,
+                     signature TEXT NOT NULL,
+                     body TEXT NOT NULL)''')
                 self.db.execute('''
                     CREATE TABLE subscriptions
                     (class TEXT NOT NULL,
@@ -58,8 +63,7 @@ class Database:
                      PRIMARY KEY (class, instance, recipient))''')
         else:
             # database exists, must check version and migrate if necessary
-            version = self.db.execute('SELECT version FROM version').fetchone()
-            version = version[0]
+            version, = self.db.execute('SELECT version FROM version').fetchone()
 
             assert version == 1
 
@@ -70,27 +74,17 @@ class Database:
         if result is None:
             return None
 
-        return self._tuple_to_zephyrgram(result)
+        return Zephyrgram.from_sql(result)
 
     def append_message(self, msg):
         with self.db:
             self.db.execute('''
                 INSERT INTO messages
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                self._zephygram_to_tuple(msg))
-
-    def _tuple_to_zephyrgram(self, data):
-        _, sender, class_, instance, recipient, opcode, auth, fields, time = \
-            data
-        auth = bool(auth)
-        fields = [x.decode() for x in fields.split(b'\x00')]
-        return Zephyrgram(sender, class_, instance, recipient, opcode,
-            auth, fields, time)
-
-    def _zephygram_to_tuple(self, msg):
-        fields = b'\x00'.join(x.encode() for x in msg.fields)
-        return (None, msg.sender, msg.cls, msg.instance, msg.recipient,
-            msg.opcode, msg.auth, fields, msg.time)
+                (id, sender, class, instance, recipient, opcode, auth, time,
+                 signature, body)
+                VALUES (:id, :sender, :class, :instance, :recipient, :opcode,
+                        :auth, :time, :signature, :body)''',
+                msg.to_sql())
 
     def first_index(self, filter=NopFilterSingleton):
         # returns None on empty database
@@ -153,7 +147,7 @@ class Database:
 
         row = cursor.fetchone()
         while row is not None:
-            yield (row[0], self._tuple_to_zephyrgram(row))
+            yield Zephyrgram.from_sql(row)
             row = cursor.fetchone()
 
     def count_messages_after(self, index, filter=NopFilterSingleton):
