@@ -67,15 +67,16 @@ class MainWindow:
 
     def draw_message(self, row, message, is_current):
         properties = self.config.get_zgram_display_properties(message,
-            is_current)
+            is_current, self.wrap_mode)
         fg = properties.get('fg_color', 'default')
         bg = properties.get('bg_color', 'default')
         color_pair = self.color_pairs[fg, bg]
 
+        header_first_col = 0 if self.wrap_mode else 2
         try:
-            self.window.addnstr(row, 2,
+            self.window.addnstr(row, header_first_col,
                 curse_string(properties.get('header', 'ERROR no header returned')),
-                self.cols - 2)
+                self.cols - header_first_col)
         except curses.error:
             # this might try printing onto the end of the last line of the
             # window, which makes curses sad
@@ -89,14 +90,17 @@ class MainWindow:
             # it turns into an 'x'
             self.window.addch(row, 0, curses.ACS_VLINE, color_pair)
 
-        first_col = 0 if self.wrap_mode else 4
 
+        first_col = 0 if self.wrap_mode else 4
         empty_row = row + 1
         for line in message.body.rstrip().split('\n'):
             if not self.wrap_mode:
                 line = line[:self.cols - first_col]
 
             if len(line) == 0:
+                if empty_row == self.lines:
+                    break
+
                 self.window.chgat(empty_row, 0, -1, color_pair)
                 if is_current and not self.wrap_mode:
                     self.window.addch(empty_row, 0, curses.ACS_VLINE, color_pair)

@@ -10,10 +10,14 @@ def _pretty_print_principal(principal):
 def _format_date(date):
     return date.strftime('%Y-%m-%d %H:%M')
 
-def get_zgram_display_properties(zgram, is_current):
+def get_zgram_display_properties(zgram, is_current, wrap_mode):
     properties = {}
 
     # header
+    prefix = ''
+    if wrap_mode:
+        prefix = '- ' if is_current else '  '
+
     auth = '' if zgram.auth else '!'
     opcode = ' [{}]'.format(zgram.opcode) if zgram.opcode else ''
     zsig = ' ({})'.format(zgram.signature) if len(zgram.signature) > 0 else ''
@@ -23,11 +27,12 @@ def get_zgram_display_properties(zgram, is_current):
 
     format = ''
     if zgram.is_personal():
-        format = '→{recipient} from {auth}{sender}{opcode} {date}{zsig}'
+        format = '{prefix}→{recipient} from {auth}{sender}{opcode} {date}{zsig}'
     else:
-        format = '{class_} / {instance} / {auth}{sender}{opcode} {date}{zsig}'
+        format = '{prefix}{class_} / {instance} / {auth}{sender}{opcode} {date}{zsig}'
 
     properties['header'] = format.format(
+        prefix=prefix,
         class_=zgram.class_,
         instance=zgram.instance,
         recipient=recipient,
