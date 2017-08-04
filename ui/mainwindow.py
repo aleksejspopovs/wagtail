@@ -34,6 +34,7 @@ class MainWindow:
 
         self.top_index = self.current_index = self.last_visible_message = None
         self.filter = NopFilterSingleton
+        self.wrap_mode = False
         self.update_size()
 
     def init_colors(self):
@@ -58,7 +59,11 @@ class MainWindow:
                 i += 1
 
     def measure_message_height(self, message):
-        return 2 + message.body.rstrip().count('\n')
+        if self.wrap_mode:
+            return 1 + sum((len(line) + self.cols - 1) // self.cols
+                           for line in message.body.rstrip().split('\n'))
+        else:
+            return 2 + message.body.rstrip().count('\n')
 
     def draw_message(self, row, message, is_current):
         properties = self.config.get_zgram_display_properties(message,
@@ -77,31 +82,42 @@ class MainWindow:
             pass
 
         self.window.chgat(row, 0, -1, color_pair)
-
-        if is_current:
+        if is_current and not self.wrap_mode:
             # we add the vertical line, then explicitly set the color for it
             # (instead of doing chgat on the entire line after printing the
             # line) because, for some reason, if we apply chgat to the pipe,
             # it turns into an 'x'
             self.window.addch(row, 0, curses.ACS_VLINE, color_pair)
 
+        first_col = 0 if self.wrap_mode else 4
+
         empty_row = row + 1
-        for i, line in enumerate(message.body.rstrip().split('\n'), 1):
-            if row + i == self.lines:
-                break
+        for line in message.body.rstrip().split('\n'):
+            if not self.wrap_mode:
+                line = line[:self.cols - first_col]
 
-            try:
-                self.window.addnstr(row + i, 4, curse_string(line), self.cols - 4)
-            except curses.error:
-                # this might try printing onto the end of the last line of the
-                # window, which makes curses sad
-                pass
+            if len(line) == 0:
+                self.window.chgat(empty_row, 0, -1, color_pair)
+                if is_current and not self.wrap_mode:
+                    self.window.addch(empty_row, 0, curses.ACS_VLINE, color_pair)
+                empty_row += 1
+                continue
 
-            self.window.chgat(row + i, 0, -1, color_pair)
-            if is_current:
-                self.window.addch(row + i, 0, curses.ACS_VLINE, color_pair)
+            while len(line) > 0:
+                if empty_row == self.lines:
+                    break
 
-            empty_row = row + i + 1
+                part, line = line[:self.cols], line[self.cols:]
+                try:
+                    self.window.addstr(empty_row, first_col, curse_string(part))
+                except curses.error:
+                    pass
+
+                self.window.chgat(empty_row, 0, -1, color_pair)
+                if is_current and not self.wrap_mode:
+                    self.window.addch(empty_row, 0, curses.ACS_VLINE, color_pair)
+
+                empty_row += 1
 
         return empty_row
 
@@ -299,6 +315,9 @@ class MainWindow:
             new_filter = Filter(filter_string)
 
             result.append(('filter', new_filter))
+        elif key == 'w':
+            self.wrap_mode = not self.wrap_mode
+            self.redraw()
         elif key == 'q':
             result.append(('quit', ))
         else:
