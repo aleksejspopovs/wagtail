@@ -5,7 +5,20 @@ import sqlite3
 # bindings is to do a "SELECT quote(?)" query.
 _sqlite_tmp = sqlite3.connect(':memory:')
 
+def sqlite_quote(s, lower=False):
+    if lower:
+        return _sqlite_tmp.execute('SELECT quote(lower(?))', (s, )).fetchone()[0]
+    else:
+        return _sqlite_tmp.execute('SELECT quote(?)', (s, )).fetchone()[0]
+
 class Filter:
+    def to_sql(self):
+        assert False, 'abstract'
+
+    def name(self):
+        assert False, 'abstract'
+
+class ParsedFilter(Filter):
     def __init__(self, code):
         self.code = code
         self.tree = ast.parse(code, mode='eval')
@@ -18,9 +31,7 @@ class Filter:
         elif isinstance(root, ast.Num):
             return str(root.n)
         elif isinstance(root, ast.Str):
-            quoted, = \
-                _sqlite_tmp.execute('SELECT quote(?)', (root.s, )).fetchone()
-            return quoted
+            return sqlite_quote(root.s)
         elif isinstance(root, ast.Name):
             # because we're parsing with mode='eval', we can't be assigning
             # a value to a variable or deleting it
@@ -98,11 +109,56 @@ class Filter:
     def to_sql(self):
         return self.sql
 
-class NopFilter(Filter):
-    def __init__(self):
-        pass
+    def name(self):
+        return self.code
 
+class NopFilter(Filter):
     def to_sql(self):
         return '1'
+
+    def name(self):
+        return None
+
+class RelatedFilter(Filter):
+    def __init__(self, app, message, class_only=False):
+        if message.is_personal():
+            other_person = message.sender
+            if (other_person == app.principal) or (other_person is None):
+                other_person = message.recipient
+
+            self._name = 'personals with {}'.format(other_person)
+            other_sql = sqlite_quote(other_person, lower=True)
+            self.sql = ('(lower(class) GLOB "message") AND '
+                        '((lower(sender) GLOB {}) OR (lower(recipient) GLOB {}))'
+                       ).format(other_sql, other_sql)
+        else:
+            if class_only:
+                self._name = 'class {}'.format(message.class_)
+                class_sql = sqlite_quote('*' + message.class_, lower=True)
+                self.sql = 'lower(class) GLOB {}'.format(class_sql)
+            else:
+                self._name = 'instance {}/{}'.format(message.class_, message.instance)
+                class_sql = sqlite_quote('*' + message.class_, lower=True)
+                instance_sql = sqlite_quote('*' + message.instance + '*')
+                self.sql = ('(lower(class) GLOB {}) AND (lower(instance) GLOB {})'
+                           ).format(class_sql, instance_sql)
+
+    def to_sql(self):
+        return self.sql
+
+    def name(self):
+        return self._name
+
+class NegationFilter(Filter):
+    def __init__(self, other):
+        self._name = 'NOT ({})'.format(other.name())
+        self.sql = 'NOT ({})'.format(other.to_sql())
+
+    def to_sql(self):
+        return self.sql
+
+    def name(self):
+        return self._name
+
 
 NopFilterSingleton = NopFilter()

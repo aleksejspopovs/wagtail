@@ -4,7 +4,7 @@ import curses
 import curses.panel
 
 from args import StandaloneArgParser, ArgParserException
-from filtering import NopFilterSingleton, Filter
+from filtering import NopFilterSingleton, ParsedFilter
 from ui.utils import curse_string
 
 def parse_cmdline_into_events(cmdline):
@@ -64,12 +64,12 @@ def parse_cmdline_into_events(cmdline):
         elif len(args) == 1:
             # TODO: try to eliminate need for quotes around filter
             try:
-                new_filter = Filter(args[0])
+                new_filter = ParsedFilter(args[0])
             except SyntaxError as error:
                 result.append(('status',
                     'Syntax error: {}'.format(error.args[0])))
             else:
-                result.append(('filter', Filter(args[0])))
+                result.append(('filter', new_filter))
         else:
             result.append(('status', 'Too many arguments for filter.'))
     elif command == 'quit':

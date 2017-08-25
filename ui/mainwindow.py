@@ -3,7 +3,7 @@ import shlex
 import curses
 import curses.panel
 
-from filtering import NopFilterSingleton, Filter
+from filtering import NopFilterSingleton, RelatedFilter
 from ui.utils import curse_string
 
 def take_up_to(it, n):
@@ -20,6 +20,7 @@ def take_up_to(it, n):
 
 class MainWindow:
     def __init__(self, app):
+        self.app = app
         self.db = app.db
         self.config = app.config
         self.screen = app.screen
@@ -137,11 +138,8 @@ class MainWindow:
 
                 messages_below = 0
                 messages_below_total = self.db.count_messages_after(-1)
-                filter_name = None
-                if self.filter is not NopFilterSingleton:
-                    filter_name = self.filter.code
                 self.status_bar.update_display(messages_below, messages_below_total,
-                    filter_name)
+                    self.filter.name())
 
                 self.window.noutrefresh()
                 return
@@ -198,13 +196,11 @@ class MainWindow:
         messages_below = self.db.count_messages_after(self.current_index,
             filter=self.filter)
         messages_below_total = messages_below
-        filter_name = None
         if self.filter is not NopFilterSingleton:
             messages_below_total = self.db.count_messages_after(
                 self.current_index)
-            filter_name = self.filter.code
         self.status_bar.update_display(messages_below, messages_below_total,
-            filter_name)
+            self.filter.name())
 
     def move_to(self, index):
         self.current_index = index
@@ -292,31 +288,12 @@ class MainWindow:
             result.append(('cmdline_open', 'filter '))
         elif key == 'F':
             result.append(('filter', NopFilterSingleton))
-        elif key == 'n':
+        elif (key == 'n') or (key == 'N'):
             if self.current_index is None:
                 return result
 
             message = self.db.get_message(self.current_index)
-            filter_string = '(cla is {}) and (ins is {})'.format(
-                repr('*' + message.class_), repr('*' + message.instance + '*'))
-            if message.is_personal():
-                other_person = message.sender
-                if (other_person == self.principal) or (other_person is None):
-                    other_person = message.recipient
-                filter_string = (('(cla is \'message\') and '
-                    '((sen is {}) or (rec is {}))')
-                    .format(repr(other_person), repr(other_person)))
-
-            new_filter = Filter(filter_string)
-
-            result.append(('filter', new_filter))
-        elif key == 'N':
-            if self.current_index is None:
-                return result
-
-            message = self.db.get_message(self.current_index)
-            filter_string = "cla is {}".format(repr('*' + message.class_))
-            new_filter = Filter(filter_string)
+            new_filter = RelatedFilter(self.app, message, key == 'N')
 
             result.append(('filter', new_filter))
         elif key == 'w':
