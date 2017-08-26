@@ -10,75 +10,82 @@ from ui.utils import curse_string
 def parse_cmdline_into_events(cmdline):
     result = []
 
-    try:
-        command, *args = shlex.split(cmdline) or ['']
-    except ValueError as error:
-        return [('status', 'Parsing error: {}'.format(error.args))]
+    first_space = cmdline.find(' ')
+    if first_space == -1:
+        first_space = len(cmdline)
 
+    command = cmdline[:first_space]
+    args_raw = cmdline[first_space + 1:].strip()
+
+    # commands that don't require shlex parsing come first
     if command == '':
         pass
-    elif command == 'zwrite':
-        parser = StandaloneArgParser()
-        parser.add_argument('-c', '--class', default='MESSAGE',
-            dest='class_')
-        parser.add_argument('-i', '--instance', default='PERSONAL')
-        parser.add_argument('-O', '--opcode', default='')
-        parser.add_argument('-d', '--deauth', action='store_true')
-        parser.add_argument('-S', '--sender', default=None)
-        parser.add_argument('-s', '--signature', default=None)
-        parser.add_argument('recipients', nargs='*')
-
-        try:
-            opts = parser.parse_args(args)
-        except ArgParserException as error:
-            result.append(('status', error.args[0]))
-        else:
-            result.append(('zwrite', opts))
-    elif (command == 'sub') or (command == 'unsub'):
-        if len(args) == 0:
-            result.append(('status',
-                '[un]sub needs 1-3 args: class [instance [recipient]]'))
-        else:
-            class_ = args[0]
-            instance = args[1] if len(args) >= 2 else '*'
-            recipient = args[2] if len(args) == 3 else '*'
-
-            if command == 'sub':
-                result.append(('subscribe', class_, instance, recipient))
-            else:
-                result.append(('unsubscribe', class_, instance, recipient))
-    elif command == 'import_zsubs':
-        if len(args) > 1:
-            result.append('status',
-                'import_zsubs takes just one optional argument, a path.')
-        else:
-            result.append(('import_zsubs', args[0] if len(args) > 0 else None))
-    elif command == 'reload_config':
-        if len(args) == 0:
-            result.append(('reload_config', ))
-        else:
-            result.append(('status', 'reload_config doesn\'t take arguments.'))
     elif command == 'filter':
-        if len(args) == 0:
+        if len(args_raw) == 0:
             result.append(('filter', NopFilterSingleton))
-        elif len(args) == 1:
-            # TODO: try to eliminate need for quotes around filter
+        else:
             try:
-                new_filter = ParsedFilter(args[0])
+                new_filter = ParsedFilter(args_raw)
             except SyntaxError as error:
                 result.append(('status',
                     'Syntax error: {}'.format(error.args[0])))
             else:
                 result.append(('filter', new_filter))
-        else:
-            result.append(('status', 'Too many arguments for filter.'))
-    elif command == 'quit':
-        if len(args) == 0:
-            result.append(('quit', ))
-        else:
-            result.append(('status', 'quit doesn\'t take arguments.'))
     else:
-        result.append(('status', 'Unknown command {}'.format(command)))
+        # now come the commands that do need the args parsed with shlex
+        try:
+            args = shlex.split(args_raw) or ['']
+        except ValueError as error:
+            return [('status', 'Parsing error: {}'.format(error.args))]
+
+        if command == 'zwrite':
+            parser = StandaloneArgParser()
+            parser.add_argument('-c', '--class', default='MESSAGE',
+                dest='class_')
+            parser.add_argument('-i', '--instance', default='PERSONAL')
+            parser.add_argument('-O', '--opcode', default='')
+            parser.add_argument('-d', '--deauth', action='store_true')
+            parser.add_argument('-S', '--sender', default=None)
+            parser.add_argument('-s', '--signature', default=None)
+            parser.add_argument('recipients', nargs='*')
+
+            try:
+                opts = parser.parse_args(args)
+            except ArgParserException as error:
+                result.append(('status', error.args[0]))
+            else:
+                result.append(('zwrite', opts))
+        elif (command == 'sub') or (command == 'unsub'):
+            if len(args) == 0:
+                result.append(('status',
+                    '[un]sub needs 1-3 args: class [instance [recipient]]'))
+            else:
+                class_ = args[0]
+                instance = args[1] if len(args) >= 2 else '*'
+                recipient = args[2] if len(args) == 3 else '*'
+
+                if command == 'sub':
+                    result.append(('subscribe', class_, instance, recipient))
+                else:
+                    result.append(('unsubscribe', class_, instance, recipient))
+        elif command == 'import_zsubs':
+            if len(args) > 1:
+                result.append('status',
+                    'import_zsubs takes just one optional argument, a path.')
+            else:
+                result.append(('import_zsubs', args[0] if len(args) > 0 else None))
+        elif command == 'reload_config':
+            if len(args) == 0:
+                result.append(('reload_config', ))
+            else:
+                result.append(('status', 'reload_config doesn\'t take arguments.'))
+        elif command == 'quit':
+            if len(args) == 0:
+                result.append(('quit', ))
+            else:
+                result.append(('status', 'quit doesn\'t take arguments.'))
+        else:
+            result.append(('status', 'Unknown command {}'.format(command)))
 
     return result
 
