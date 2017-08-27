@@ -160,5 +160,15 @@ class NegationFilter(Filter):
     def name(self):
         return self._name
 
+class ConjunctionFilter(Filter):
+    def __init__(self, first, second):
+        self._name = '({}) AND ({})'.format(first.name(), second.name())
+        self.sql = '({}) AND ({})'.format(first.to_sql(), second.to_sql())
+
+    def to_sql(self):
+        return self.sql
+
+    def name(self):
+        return self._name
 
 NopFilterSingleton = NopFilter()

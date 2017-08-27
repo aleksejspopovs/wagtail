@@ -3,7 +3,8 @@ import shlex
 import curses
 import curses.panel
 
-from filtering import NopFilterSingleton, RelatedFilter, NegationFilter
+from filtering import (NopFilterSingleton, RelatedFilter, NegationFilter,
+    ConjunctionFilter)
 from ui.utils import curse_string
 
 def take_up_to(it, n):
@@ -301,13 +302,12 @@ class MainWindow:
             self.redraw()
         elif key == 's':
             # skip current thread
-            # TODO: if there's an active filter, perhaps this ought to
-            # skip to next thread matching that filter?
             if self.current_index is None:
                 return result
 
             message = self.db.get_message(self.current_index)
-            unrelated_filter = NegationFilter(RelatedFilter(self.app, message))
+            unrelated_filter = ConjunctionFilter(self.filter,
+                NegationFilter(RelatedFilter(self.app, message)))
             next_message = self.db.advance(self.current_index, 0,
                 filter=unrelated_filter)
 
@@ -315,7 +315,7 @@ class MainWindow:
                 # advance() returns last_index(filter) when no messages matching
                 # filter exist after given, so the above condition is true iff
                 # there is nothing to skip to
-                self.current_index = self.db.last_index()
+                self.current_index = self.db.last_index(filter=self.filter)
             else:
                 self.current_index = next_message
 
