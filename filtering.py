@@ -137,9 +137,11 @@ class RelatedFilter(Filter):
                 class_sql = sqlite_quote('*' + message.class_, lower=True)
                 self.sql = 'lower(class) GLOB {}'.format(class_sql)
             else:
-                self._name = 'instance {}/{}'.format(message.class_, message.instance)
+                self._name = 'instance {}/{}'.format(message.class_,
+                    message.instance)
                 class_sql = sqlite_quote('*' + message.class_, lower=True)
-                instance_sql = sqlite_quote('*' + message.instance + '*')
+                instance_sql = sqlite_quote('*' + message.instance + '*',
+                    lower=True)
                 self.sql = ('(lower(class) GLOB {}) AND (lower(instance) GLOB {})'
                            ).format(class_sql, instance_sql)
 
